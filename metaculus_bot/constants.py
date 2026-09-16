@@ -20,7 +20,7 @@ from metaculus_bot.time_utils import _as_utc
 # =============================================================================
 # AI Forecasting Benchmark tournament (bot-only competition)
 # Update when new season starts: https://www.metaculus.com/project/aib/
-TOURNAMENT_ID: str = "summer-futureeval-2026"  # Summer 2026 FutureEval Bot Tournament (project ID: 33022)
+TOURNAMENT_ID: str = "fall-futureeval-2026"  # Summer 2026 FutureEval Bot Tournament (project ID: 33022)
 TOURNAMENT_END_DATE: str = "2026-09-06"  # Formal tournament close date
 TOURNAMENT_HARD_STOP_WEEKS: int = 2  # ~2 weeks of wiggle room past close before erroring
 

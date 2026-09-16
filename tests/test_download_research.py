@@ -72,7 +72,7 @@ def _artifact(
         "page_url": f"https://www.metaculus.com/questions/{POST_ID}",
         "question_text": "Will the thing happen?",
         "run_mode": "tournament",
-        "tournament_id": "summer-futureeval-2026",
+        "tournament_id": "fall-futureeval-2026",
         "research_text": "## News Articles (AskNews)\nThe authoritative capture.",
         "providers_used": ["asknews", "native_search"],
         **extra,
