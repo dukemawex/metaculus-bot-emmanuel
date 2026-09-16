@@ -5,7 +5,7 @@ fetch_hardening wraps ``MetaculusApi._get_questions_from_api`` so transient
 403/429/5xx and connection-level errors don't kill a CI run.
 
 Observed failure (2026-05-19): a single CDN/WAF-style 403 on
-``/api/posts/?...&tournaments=summer-futureeval-2026`` — 33s stall, generic
+``/api/posts/?...&tournaments=fall-futureeval-2026`` — 33s stall, generic
 "API only available to authenticated users" body — on a known-good token.
 This wrapper would have absorbed it cleanly.
 """

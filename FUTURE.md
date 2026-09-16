@@ -220,7 +220,7 @@ finding and does not depend on that bin. (b) The post-flip binary YES/NO gate (n
 n=41: verdict consistent with a base-rate artifact on both sides**, now in all four eras including
 one at a ~54% YES rate — retire the gate rather than re-target it; post_flip is a closed era.
 (c) Retargeted at `triple_era`, the prior-round n-gates (n≥40 YES/NO re-test, n≥25 dimension
-re-run, n≥15 MC verdict) are **unreachable inside summer-futureeval-2026**: 4 STRICT triple
+re-run, n≥15 MC verdict) are **unreachable inside fall-futureeval-2026**: 4 STRICT triple
 binaries today, ~9 projected by the 2026-09-20 hard stop, the tournament closes 2026-09-06, and no
 successor slug exists yet — record them as awaiting a next tournament, not accrual.
 (`scratch/residual_2026-08-24/dim_binary-mc-calibration.md`.)
@@ -1372,7 +1372,7 @@ Goal would be: route Gemini Google-Search-grounded calls (currently in `metaculu
 
 **Recheck periodically**: <https://openrouter.ai/changes> — if/when OpenRouter announces native Google grounding (or a passthrough for `tools=[{"google_search":{}}]`), revisit this migration. Until then, no action. **Last actually verified 2026-05-17 and not re-checked since (noted 2026-08-25)** — treat the "NOT supported" status as a dated reading, not a current fact, and re-verify before quoting it.
 
-### Update analysis-CLI defaults to summer-futureeval-2026 (added 2026-05-17)
+### Update analysis-CLI defaults to fall-futureeval-2026 (added 2026-05-17)
 
 Tournament rolled spring→summer 2026-05-17; live `TOURNAMENT_ID` updated but **three CLI defaults stay
 pinned to spring** intentionally (`ablation/cli.py:122`, `performance_analysis/collector.py:37`,
@@ -1380,10 +1380,10 @@ pinned to spring** intentionally (`ablation/cli.py:122`, `performance_analysis/c
 resolved dataset, not the freshly-opened one.
 
 **The gate has fired — this is now an open flip, 2026-08-25.** The "~30+ resolved Qs" trigger is long
-past: summer-futureeval-2026 carries 104 resolved tournament questions in the post_flip cell alone,
+past: fall-futureeval-2026 carries 104 resolved tournament questions in the post_flip cell alone,
 it closes 2026-09-06, and no successor slug exists yet, so summer IS the resolved dataset for the
 foreseeable future while spring is the stale one. Flip all three defaults to
-`summer-futureeval-2026`; also refresh the stale slug examples in the comment and message at
+`fall-futureeval-2026`; also refresh the stale slug examples in the comment and message at
 `tests/test_tournament_dates.py:126,131`. Cheap and free — and AGENTS.md already tells readers to
 pass `--tournament` explicitly because the default is spring, which is the tell that the default is
 now the wrong one.
