@@ -236,13 +236,12 @@ class TestProductionKwargShapesReachAcompletion:
         """Every real forecaster slot funnels its declared kwargs (and temperature=None) intact.
 
         Roster-agnostic: iterates the live ``FORECASTER_LLMS`` singletons and asserts
-        the funnel is transparent for whatever is configured. Also confirms the
-        current production reasoning/verbosity shapes are present on at least one slot
-        so this stays a meaningful pin rather than a vacuous loop.
+        the funnel is transparent for whatever is configured — including the AkashML
+        endpoint routing (model/base_url) when a slot declares it. The reasoning /
+        verbosity shape pins live on the synthetic slot in the test above, since the
+        current roster runs at provider defaults.
         """
         assert FORECASTER_LLMS, "roster must be non-empty for this pin to mean anything"
-        saw_xhigh_reasoning = False
-        saw_verbosity_extra_body = False
 
         for llm in FORECASTER_LLMS:
             declared = llm.litellm_kwargs
@@ -254,17 +253,11 @@ class TestProductionKwargShapesReachAcompletion:
             # temperature=None must survive for every reasoning forecaster (no injected 0).
             assert sent["temperature"] is None
             assert sent["timeout"] == declared["timeout"]
-            if "reasoning" in declared:
-                assert sent["reasoning"] == declared["reasoning"]
-                if declared["reasoning"] == _PROD_REASONING_XHIGH:
-                    saw_xhigh_reasoning = True
-            if "extra_body" in declared:
-                assert sent["extra_body"] == declared["extra_body"]
-                if declared["extra_body"] == _PROD_VERBOSITY_EXTRA_BODY:
-                    saw_verbosity_extra_body = True
-
-        assert saw_xhigh_reasoning, "expected a forecaster with reasoning={'effort':'xhigh'} in the roster"
-        assert saw_verbosity_extra_body, "expected a forecaster with extra_body={'verbosity':'high'} in the roster"
+            assert sent["model"] == declared["model"]
+            assert sent.get("base_url") == declared.get("base_url")
+            for key in ("reasoning", "extra_body"):
+                if key in declared:
+                    assert sent[key] == declared[key]
 
 
 class TestTemperatureNoneWorkaround:

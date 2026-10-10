@@ -8,9 +8,10 @@ recognises the prefix and delegates here, so ``llm_configs.py`` keeps a single
 builder for every slot.
 
 Under the hood the call goes to litellm's generic ``openai/`` provider with
-AkashML's base URL and the personal ``AKASHML_API_KEY``. There is no donated
-key and no fallback: AkashML is not behind OpenRouter, so an AkashML failure
-surfaces like any other forecaster error.
+AkashML's base URL and the personal ``AKASHML_API_KEY``. AkashML is not behind
+OpenRouter, so the donated key never applies. A plain ``AkashMlLlm`` surfaces a
+failure like any other forecaster error; ``AkashMlWithFreeFallbackLlm`` (used by
+the forecaster roster) retries once on a free OpenRouter model instead.
 
 Pricing is registered with litellm (``register_akashml_pricing``) so the
 framework's ``MonetaryCostManager`` reports real spend for AkashML calls
@@ -30,7 +31,7 @@ from typing import Any
 import litellm
 from forecasting_tools import GeneralLlm
 
-from metaculus_bot.constants import AKASHML_API_KEY_ENV
+from metaculus_bot.constants import AKASHML_API_KEY_ENV, OPENROUTER_API_KEY_ENV
 
 logger: logging.Logger = logging.getLogger(__name__)
 
@@ -146,6 +147,94 @@ class AkashMlLlm(GeneralLlm):
         self.model = model
 
 
-def build_akashml_llm(model: str, **kwargs: Any) -> GeneralLlm:
-    """Construct an ``AkashMlLlm`` for an ``akashml/<model-id>`` slug."""
-    return AkashMlLlm(model=model, **kwargs)
+# Free OpenRouter backup for each AkashML forecaster slot. None of the AkashML models
+# has a `:free` twin on OpenRouter (checked against /api/v1/models 2026-10-10), so each
+# slot gets a DIFFERENT strong free model to keep the ensemble diverse when AkashML is
+# down. All three have >=262k context and a completion cap above the forecaster's 64k
+# max_tokens. Free models are rate-limited per account; a throttled one just fails
+# the slot.
+AKASHML_FREE_FALLBACKS: dict[str, str] = {
+    "zai-org/GLM-5.3": "openrouter/nvidia/nemotron-3-ultra-550b-a55b:free",
+    "moonshotai/Kimi-K3": "openrouter/thinkingmachines/inkling:free",
+    "Qwen/Qwen3.8-27B": "openrouter/nvidia/nemotron-3-super-120b-a12b:free",
+}
+
+# Run counter of AkashML -> OpenRouter free fallbacks. Diagnostic, NOT folded into the
+# alertable total: the backup is free and by design, so it must not redden CI on its own.
+# The per-event AKASHML_FALLBACK warning makes every occurrence grep-able in run logs.
+_akashml_fallback_count: int = 0
+
+
+def get_akashml_fallback_count() -> int:
+    return _akashml_fallback_count
+
+
+def reset_akashml_fallback_count() -> None:
+    """Reset the counter to zero. Used by tests; not for production code."""
+    global _akashml_fallback_count  # noqa: PLW0603  # module-global run counter is the design (AGENTS.md)
+    _akashml_fallback_count = 0
+
+
+def fallback_served_marker(fallback_model: str) -> str:
+    """Line prepended to an answer the free fallback produced.
+
+    The forecaster's ``Model:`` line names the configured slot (the AkashML slug), and the
+    LLM singletons are shared by concurrent questions, so no attribute on the object can
+    say which model served THIS call. Stamping the answer itself keeps attribution honest
+    in the published rationale. Value extraction reads the trailing JSON block, so a
+    leading line does not disturb it.
+    """
+    return f"[AkashML unavailable — this forecast was produced by fallback model {fallback_model}]"
+
+
+class AkashMlWithFreeFallbackLlm(AkashMlLlm):
+    """AkashML primary; on ANY failure, retry once on a free OpenRouter model.
+
+    The fallback runs on the personal ``OPENROUTER_API_KEY`` as a plain ``GeneralLlm``,
+    deliberately NOT via the donated-key wrapper: most ``:free`` models are served by
+    providers outside the donated key's allowed list, which would 404 and bump the
+    alertable donated->personal counter on every call (see ablation/forecaster_lineup.py).
+    """
+
+    def __init__(self, *, model: str, fallback_model: str, api_key: str | None = None, **kwargs: Any) -> None:
+        super().__init__(model=model, api_key=api_key, **kwargs)
+        self.fallback_model = fallback_model
+        openrouter_key = os.getenv(OPENROUTER_API_KEY_ENV)
+        if not openrouter_key:
+            logger.warning(
+                "AKASHML_FALLBACK_UNAVAILABLE: %s is not set; %s has no free fallback.",
+                OPENROUTER_API_KEY_ENV,
+                model,
+            )
+        self._fallback_llm: GeneralLlm | None = (
+            GeneralLlm(model=fallback_model, api_key=openrouter_key, **kwargs) if openrouter_key else None
+        )
+
+    async def invoke(self, prompt: Any, system_prompt: str | None = None) -> str:  # type: ignore[override]
+        try:
+            return await super().invoke(prompt, system_prompt)
+        except Exception as e:
+            if self._fallback_llm is None:
+                raise
+            # No await before the increment, so concurrent fallbacks cannot race it.
+            global _akashml_fallback_count  # noqa: PLW0603  # module-global run counter is the design (AGENTS.md)
+            _akashml_fallback_count += 1
+            logger.warning(
+                "AKASHML_FALLBACK: model=%s failed, retrying on free OpenRouter model %s. error=%s: %s",
+                self.model,
+                self.fallback_model,
+                type(e).__name__,
+                str(e)[:500],
+            )
+            answer = await self._fallback_llm.invoke(prompt, system_prompt)
+            return f"{fallback_served_marker(self.fallback_model)}\n\n{answer}"
+
+
+def build_akashml_llm(model: str, fallback_model: str | None = None, **kwargs: Any) -> GeneralLlm:
+    """Construct an AkashML LLM for an ``akashml/<model-id>`` slug.
+
+    With ``fallback_model`` (an ``openrouter/...:free`` slug), failures retry once there.
+    """
+    if fallback_model is None:
+        return AkashMlLlm(model=model, **kwargs)
+    return AkashMlWithFreeFallbackLlm(model=model, fallback_model=fallback_model, **kwargs)
