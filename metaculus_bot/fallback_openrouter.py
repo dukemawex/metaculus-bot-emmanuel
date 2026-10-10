@@ -7,6 +7,7 @@ from typing import Any
 import litellm.exceptions
 from forecasting_tools import GeneralLlm
 
+from metaculus_bot.akashml import build_akashml_llm, is_akashml_model
 from metaculus_bot.constants import (
     CREDIT_ALERT_RESUME_DATE,
     OAI_ANTH_OPENROUTER_KEY_ENV,
@@ -737,7 +738,13 @@ def build_llm_with_openrouter_fallback(model: str, **kwargs: Any) -> GeneralLlm:
     Construct a GeneralLlm that automatically falls back from the Metaculus-donated OpenRouter
     key to the operator's general key for providers covered by the donated key (see
     ``DONATED_KEY_PROVIDERS``). For other models, returns a plain GeneralLlm.
+
+    ``akashml/<model-id>`` slugs are not OpenRouter models at all: they go to
+    AkashML's OpenAI-compatible endpoint on the personal ``AKASHML_API_KEY``
+    (see ``metaculus_bot.akashml``), with no donated key and no fallback.
     """
+    if is_akashml_model(model):
+        return build_akashml_llm(model, **kwargs)
     if should_route_via_donated_key(model):
         special_key = os.getenv(OAI_ANTH_OPENROUTER_KEY_ENV)
         general_key = os.getenv(OPENROUTER_API_KEY_ENV)

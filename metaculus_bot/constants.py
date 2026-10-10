@@ -148,6 +148,10 @@ TEST_QUESTIONS_OVERRIDE_ENV: str = "TEST_QUESTIONS_OVERRIDE"
 # for which of these are shared (donated) vs. personal.
 OPENROUTER_API_KEY_ENV: str = "OPENROUTER_API_KEY"
 OAI_ANTH_OPENROUTER_KEY_ENV: str = "OAI_ANTH_OPENROUTER_KEY"
+# AkashML (personal key): OpenAI-compatible hosting of open-weight models on the Akash
+# Network. Wiring lives in ``metaculus_bot/akashml.py``; models opt in via the
+# ``akashml/<model-id>`` slug prefix.
+AKASHML_API_KEY_ENV: str = "AKASHML_API_KEY"
 ASKNEWS_CLIENT_ID_ENV: str = "ASKNEWS_CLIENT_ID"
 ASKNEWS_SECRET_ENV: str = "ASKNEWS_SECRET"  # noqa: S105  # env var NAME, not a credential
 EXA_API_KEY_ENV: str = "EXA_API_KEY"
