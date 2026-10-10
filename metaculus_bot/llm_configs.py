@@ -111,6 +111,24 @@ FORECASTER_LLMS: list[GeneralLlm] = [
         model="openrouter/google/gemini-3.1-pro-preview",
         **_FORECASTER_CONFIG,
     ),
+    # 2026-10-10: three open-weight AkashML slots added alongside the triple (operator
+    # decision; roster 3 -> 6). Routed to AkashML's OpenAI-compatible endpoint on the
+    # personal AKASHML_API_KEY via the `akashml/` slug (metaculus_bot/akashml.py) — not
+    # OpenRouter, so no donated key and no key fallback. No reasoning kwargs: the
+    # OpenRouter `reasoning` shape is not part of AkashML's documented parameter set, so
+    # these run at provider defaults. gpt-oss is deliberately excluded (operator).
+    build_llm_with_openrouter_fallback(
+        model="akashml/zai-org/GLM-5.3",
+        **_FORECASTER_CONFIG,
+    ),
+    build_llm_with_openrouter_fallback(
+        model="akashml/moonshotai/Kimi-K3",
+        **_FORECASTER_CONFIG,
+    ),
+    build_llm_with_openrouter_fallback(
+        model="akashml/Qwen/Qwen3.8-27B",
+        **_FORECASTER_CONFIG,
+    ),
 ]
 
 
